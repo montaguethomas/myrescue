@@ -173,7 +173,7 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 }
 
 const char * usage = 
-"myrescue <options> <input-file> <output-file>\n"
+"myrescue [<options>] <input-file> <output-file>\n"
 "options:\n"
 "-b <block-size>   block size in bytes, default: 4096\n"
 "-B <bitmap-file>  bitmap-file, default: <output-file>.bitmap\n"
