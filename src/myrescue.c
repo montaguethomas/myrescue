@@ -297,7 +297,7 @@ int main(int argc, char** argv)
 #ifdef CHECK_END_BLOCK
 	if ( end_block > block_count ) {
 		fprintf ( stderr, 
-			  "end_block(%d) > block_count(%Ld)\n"
+			  "end_block(%ld) > block_count(%Ld)\n"
 			  "end_block clipped\n",
 			  end_block, block_count ) ;
 		end_block = block_count ;
@@ -305,7 +305,7 @@ int main(int argc, char** argv)
 #endif
 	if ( start_block >= end_block ) {
 		fprintf ( stderr, 
-			  "start_block(%d) >= end_block(%d)\n",
+			  "start_block(%ld) >= end_block(%ld)\n",
 			  start_block, end_block ) ;
 		exit(-1) ;
 	}
