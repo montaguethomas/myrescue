@@ -1,4 +1,4 @@
-.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.5 2004/02/11 16:14:40 kristofk Exp $
+.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.6 2004/09/05 15:42:37 kristofk Exp $
 .TH MYRESCUE "1" "December 2002" "myrescue 0.9.0" "User Commands"
 .SH NAME
 myrescue \- Harddisc Rescue
@@ -11,6 +11,8 @@ myrescue \- Harddisc Rescue
 .RB [ -S ]
 .RB [ -r
 .IR retry-count ]
+.RB [ -f
+.IR skip-failed ]
 .RB [ -s
 .IR start-block ]
 .RB [ -e
@@ -78,6 +80,10 @@ given, defaults to
 Activate skip mode: When encountering errors increase the stepsize
 exponentially until a readable block is found.
 .TP
+.BI -f " skip-failed"
+Skip blocks that have already had <skip-failed> failures. Useful to
+avoid scratching the same block over and over again.
+.TP
 .BI -r " retry-count"
 The number of times to read a block before it is declared
 bad for this run. (You can still retry it on the next run.) Default: 1
@@ -110,7 +116,8 @@ Start a skip mode run with one retry per block to first copy
 the undamaged area.
 .IP \(bu
 Start a normal run with one retry per block to copy the
-remaining skipped blocks.
+remaining skipped blocks. You may try to use -f 1 to skip the
+damaged blocks from the first run.
 .IP \(bu
 Repeat until the number of errors seems to have converged.
 Try waiting a couple of hours between the retries.
