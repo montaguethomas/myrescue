@@ -69,9 +69,10 @@ void poke_map(int bitmap_fd, int block, char val)
 	}
 }
 
-int copy_block(int src_fd, int dst_fd, long block_num, int block_size)
+int copy_block( int src_fd, int dst_fd, 
+		long block_num, int block_size,
+		unsigned char * buffer )
 {
-	unsigned char buffer[block_size];
 	long long filepos ;
 	ssize_t src_count ;
 	ssize_t dst_count ;
@@ -104,12 +105,14 @@ int copy_block(int src_fd, int dst_fd, long block_num, int block_size)
 }
 
 int try_block ( int src_fd, int dst_fd, 
-	       long block_num, int block_size, int retry_count )
+	       long block_num, int block_size, int retry_count,
+		unsigned char * buffer )
 {
 	int r ;
 	for ( r = 0 ; r < retry_count ; r++ ) {
 		if ( copy_block ( src_fd, dst_fd, 
-				  block_num, block_size ) == 0 )
+				  block_num, block_size,
+				  buffer ) == 0 )
 			return 1 ;
 	}
 	return 0 ;
@@ -127,7 +130,8 @@ void print_status ( long block, long start_block, long end_block,
 
 void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 	       int block_size, long start_block, long end_block,
-	       int retry_count, int skip )
+	       int retry_count, int skip,
+	       unsigned char * buffer )
 {
 	long block_step = 1;
 	long block ;
@@ -142,7 +146,8 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 			print_status ( block, start_block, end_block, 
 				       ok_count, bad_count ) ;
 			if ( try_block ( src_fd, dst_fd, 
-					 block, block_size, retry_count ) ) {
+					 block, block_size, retry_count,
+					 buffer ) ) {
 				++ok_count ;
 				poke_map(bitmap_fd, block, 1);
 				block_step = 1;
@@ -182,9 +187,9 @@ int main(int argc, char** argv)
 {
 	char *src_name ;
 	char *dst_name ;
-	char *bitmap_name = 0 ;
+	char *bitmap_name = NULL ;
 	char bitmap_suffix[] = ".bitmap" ;
-
+	
 	int block_size    = 4096 ;
 	int skip          = 0 ;
 	int retry_count   = 1 ;
@@ -196,6 +201,8 @@ int main(int argc, char** argv)
 	int dst_fd ;
 	int src_fd ;
 	int bitmap_fd ;
+
+	unsigned char* buffer ;
 
         int optc ;
 
@@ -251,15 +258,22 @@ int main(int argc, char** argv)
 		exit(-1) ;
 	}
 
+	/* buffer */
+	buffer = malloc ( block_size ) ;
+	if ( buffer == NULL ) {
+		fprintf ( stderr, "malloc (%d) failed\n", block_size ) ;
+		exit(-1) ;
+	}
+
 	/* filenames */
 
 	src_name = argv[optind] ;
 	dst_name = argv[optind+1] ;
 
-	if ( bitmap_name == 0 ) {
+	if ( bitmap_name == NULL ) {
 		bitmap_name = malloc ( strlen(dst_name) + 
 				       strlen(bitmap_suffix) + 1 ) ;
-		if ( bitmap_name == 0 ) {
+		if ( bitmap_name == NULL ) {
 			fprintf ( stderr, "malloc failed\n" ) ;
 			exit(-1) ;
 		}
@@ -313,6 +327,7 @@ int main(int argc, char** argv)
 	/* start the real job */
 	do_copy ( src_fd, dst_fd, bitmap_fd,
 		  block_size, start_block, end_block,
-		  retry_count, skip ) ;
+		  retry_count, skip,
+		  buffer ) ;
 	return 0 ;
 }
