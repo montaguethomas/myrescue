@@ -130,7 +130,7 @@ void print_status ( long block, long start_block, long end_block,
 
 void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 	       int block_size, long start_block, long end_block,
-	       int retry_count, int skip, int skip_fail,
+	       int retry_count, int skip, int skip_fail, int reverse,
 	       unsigned char * buffer )
 {
 	long block_step = 1;
@@ -138,9 +138,11 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 	long ok_count = 0 ;
 	long bad_count = 0 ;
 	char block_state ;
+	int  forward = !reverse;
 
-	for ( block = start_block ; block < end_block ; 
-	      block += block_step ) {
+	for ( block = forward ? start_block : (end_block-1) ; 
+	      forward ? (block < end_block) : (block >= start_block) ; 
+	      block += forward ? block_step : -block_step ) {
 		block_state = peek_map ( bitmap_fd, block ) ;
 		if (block_state <= 0) {
 			print_status ( block, start_block, end_block, 
@@ -169,7 +171,7 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 		}
 		
 	}
-	print_status ( end_block, start_block, end_block, 
+	print_status ( forward ? end_block : start_block, start_block, end_block, 
 		       ok_count, bad_count ) ;
 	fprintf ( stderr, "\n" ) ;
 }
@@ -184,6 +186,7 @@ const char * usage =
 "-r <retry-count>  try up to <retry-count> reads per block, default: 1\n"
 "-s <start-block>  start block number, default: 0\n"
 "-e <end-block>    end block number (excl.), default: size of <input-file>\n"
+"-R                reverse copy direction\n"
 "-h, -?            usage information\n" ;
 
 int main(int argc, char** argv)
@@ -199,6 +202,7 @@ int main(int argc, char** argv)
 	int retry_count   = 1 ;
 	long start_block   = 0 ;
 	long end_block     = -1 ;
+	int reverse       = 0 ;
 
 	long long block_count ;
 
@@ -212,7 +216,7 @@ int main(int argc, char** argv)
 
 	/* options */
 
-        while ( (optc = getopt ( argc, argv, "b:B:Sf:r:s:e:h?" ) ) != -1 ) {
+        while ( (optc = getopt ( argc, argv, "b:B:Sf:r:s:e:Rh?" ) ) != -1 ) {
 		switch ( optc ) {
 		case 'b' :
 			block_size = atol(optarg);
@@ -259,6 +263,9 @@ int main(int argc, char** argv)
 					optarg);
 				exit(-1);
 			}
+			break ;
+		case 'R' :
+			reverse = 1 ;
 			break ;
                 default :
 			fprintf ( stderr, "%s", usage ) ;
@@ -339,7 +346,7 @@ int main(int argc, char** argv)
 	/* start the real job */
 	do_copy ( src_fd, dst_fd, bitmap_fd,
 		  block_size, start_block, end_block,
-		  retry_count, skip, skip_fail,
+		  retry_count, skip, skip_fail, reverse,
 		  buffer ) ;
 	return 0 ;
 }
