@@ -34,6 +34,8 @@
 #include <getopt.h>
 #include <string.h>
 
+#define LONG_TIME 3
+
 long long filesize ( int fd )
 {
 	long long rval = lseek64(fd, 0, SEEK_END) ;
@@ -133,7 +135,7 @@ int try_block ( int src_fd, int dst_fd,
 
 int check_block ( int bitmap_fd, long block_num, 
 		  int good_range, int failed_range,
-		  int skip_fail,
+		  int skip_fail, int long_as_bad,
 		  long start, long end )
 {
 	int range = (good_range > failed_range) 
@@ -146,11 +148,11 @@ int check_block ( int bitmap_fd, long block_num,
 		char st = peek_map(bitmap_fd,b);
 		if ( (failed_range > 0) &&
 		     (abs(block_num-b) <= failed_range) &&
-		     (-st >= skip_fail) )
+		     ((-st >= skip_fail) || (long_as_bad && st == 2)) )
 			return 0;
 		if ( (good_range > 0) &&
 		     (abs(block_num-b) <= good_range) &&
-		     (st > 0) )
+		     ((st > 0) && (!long_as_bad || st != 2)) )
 			found_good = 1;
 	}
 	return good_range > 0 ? found_good : 1;
@@ -170,7 +172,7 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 	       int block_size, long start_block, long end_block,
 	       int retry_count, int abort_error, int skip, 
 	       int skip_fail, int reverse,
-	       int good_range, int failed_range,
+	       int good_range, int failed_range, int long_as_bad,
 	       unsigned char * buffer )
 {
 	long block_step = 1;
@@ -179,6 +181,8 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 	long bad_count = 0 ;
 	char block_state ;
 	int  forward = !reverse;
+	time_t before, after;
+	int long_time;
 
 	for ( block = forward ? start_block : (end_block-1) ; 
 	      forward ? (block < end_block) : (block >= start_block) ; 
@@ -187,16 +191,27 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 		if ( (block_state <= 0) &&
 		     ( (skip_fail == 0) || (-block_state < skip_fail) ) &&
 		     check_block ( bitmap_fd, block,
-				   good_range, failed_range, skip_fail,
+				   good_range, failed_range, 
+				   skip_fail, long_as_bad,
 				   start_block, end_block ) ) {
 			print_status ( block, start_block, end_block, 
 				       ok_count, bad_count ) ;
+			time(&before);
 			if ( try_block ( src_fd, dst_fd, 
 					 block, block_size, retry_count,
 					 buffer ) ) {
+				time(&after);
+				long_time = (after - before >= LONG_TIME);
 				++ok_count ;
-				poke_map(bitmap_fd, block, 1);
-				block_step = 1;
+				poke_map(bitmap_fd, block, long_time ? 2 : 1);
+				if ( long_time && long_as_bad ) {
+					if (abort_error)
+						break;
+					if (skip)
+						block_step *= 2;
+				} else {
+					block_step = 1;
+				}
 			} else {
 				++bad_count;
 				poke_map(bitmap_fd, block, block_state-1);
@@ -223,12 +238,15 @@ int do_jump_run ( int src_fd, int dst_fd, int bitmap_fd,
 		  int block_size, long start_block, long end_block,
 		  int retry_count, int abort_error, int skip, 
 		  int skip_fail, int jump,
-		  int good_range, int failed_range,
+		  int good_range, int failed_range, int long_as_bad,
 		  long block, int jump_count, int jump_step,
 		  long *ok_count, long *bad_count,
 		  unsigned char * buffer ) 
 {
 	char block_state ;
+	time_t before, after;
+	int long_time;
+
 	for ( ; jump_count-- > 0 ; block += jump_step ) {
 		if ( block >= end_block )
 			break;
@@ -241,7 +259,8 @@ int do_jump_run ( int src_fd, int dst_fd, int bitmap_fd,
 		
 		if ( ((skip_fail > 0) && (-block_state >= skip_fail)) ||
 		     (!check_block ( bitmap_fd, block,
-				     good_range, failed_range, skip_fail,
+				     good_range, failed_range, 
+				     skip_fail, long_as_bad,
 				     start_block, end_block )) ) {
 			if (skip || abort_error)
 				return 0;
@@ -252,11 +271,18 @@ int do_jump_run ( int src_fd, int dst_fd, int bitmap_fd,
 		print_status ( block, start_block, end_block, 
 			       *ok_count, *bad_count ) ;
 		
+		time(&before);
 		if ( try_block ( src_fd, dst_fd, 
 				 block, block_size, retry_count,
 				 buffer ) ) {
+			time(&after);
+			long_time = (after - before >= LONG_TIME);
 			++(*ok_count);
-			poke_map(bitmap_fd, block, 1);
+			poke_map(bitmap_fd, block, long_time ? 2 : 1);
+			if ( long_as_bad && long_time ) {
+				if (skip || abort_error)
+					return 0;
+			}
 		} else {
 			++(*bad_count);
 			poke_map(bitmap_fd, block, block_state-1);
@@ -271,7 +297,7 @@ void do_jump ( int src_fd, int dst_fd, int bitmap_fd,
 	       int block_size, long start_block, long end_block,
 	       int retry_count, int abort_error, int skip, 
 	       int skip_fail, int jump,
-	       int good_range, int failed_range,
+	       int good_range, int failed_range, int long_as_bad,
 	       unsigned char * buffer )
 {
 	long block ;
@@ -296,7 +322,7 @@ void do_jump ( int src_fd, int dst_fd, int bitmap_fd,
 				   block_size, start_block, end_block,
 				   retry_count, abort_error, skip, 
 				   skip_fail, jump,
-				   good_range, failed_range,
+				   good_range, failed_range, long_as_bad,
 				   block, jump, +1,
 				   &ok_count, &bad_count,
 				   buffer) )
@@ -307,7 +333,7 @@ void do_jump ( int src_fd, int dst_fd, int bitmap_fd,
 				   block_size, start_block, end_block,
 				   retry_count, abort_error, skip, 
 				   skip_fail, jump,
-				   good_range, failed_range,
+				   good_range, failed_range, long_as_bad,
 				   block-1, jump-1, -1,
 				   &ok_count, &bad_count,
 				   buffer) )
@@ -332,6 +358,7 @@ const char * usage =
 "-G <range>        only read <range> blocks around good ones\n"
 "-F <range>        skip <range> blocks around failed ones\n"
 "-J <number>       randomly jump after reading a few sectors\n"
+"-T                make -A, -S and -F avoid blocks that took long to read\n"
 "-R                reverse copy direction\n"
 "-h, -?            usage information\n" ;
 
@@ -353,6 +380,7 @@ int main(int argc, char** argv)
 	int jump          = 0 ;
 	int good_range    = 0 ;
 	int failed_range  = 0 ;
+	int long_as_bad    = 0 ;
 
 	long long block_count ;
 
@@ -366,7 +394,7 @@ int main(int argc, char** argv)
 
 	/* options */
 
-        while ( (optc = getopt ( argc, argv, "b:B:ASf:r:s:e:J:G:F:Rh?" ) ) != -1 ) {
+        while ( (optc = getopt ( argc, argv, "b:B:ASf:r:s:e:J:G:F:TRh?" ) ) != -1 ) {
 		switch ( optc ) {
 		case 'b' :
 			block_size = atol(optarg);
@@ -440,6 +468,9 @@ int main(int argc, char** argv)
 					optarg);
 				exit(-1);
 			}
+			break ;
+		case 'T' :
+			long_as_bad = 1 ;
 			break ;
 		case 'R' :
 			reverse = 1 ;
@@ -526,14 +557,14 @@ int main(int argc, char** argv)
 			  block_size, start_block, end_block,
 			  retry_count, abort_error, skip, 
 			  skip_fail, reverse,
-			  good_range, failed_range,
+			  good_range, failed_range, long_as_bad,
 			  buffer ) ;
 	else
 		do_jump ( src_fd, dst_fd, bitmap_fd,
 			  block_size, start_block, end_block,
 			  retry_count, abort_error, skip, 
 			  skip_fail, jump,
-			  good_range, failed_range,
+			  good_range, failed_range, long_as_bad,
 			  buffer );
 	return 0 ;
 }
