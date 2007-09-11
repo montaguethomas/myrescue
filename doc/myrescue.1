@@ -1,5 +1,5 @@
-.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.9 2007/08/26 21:58:58 kristofk Exp $
-.TH MYRESCUE "8" "August 2007" "myrescue 0.9.4" "User Commands"
+.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.10 2007/09/11 00:31:22 kristofk Exp $
+.TH MYRESCUE "8" "September 2007" "myrescue 0.9.5" "User Commands"
 .SH NAME
 myrescue \- Harddisc Rescue
 .SH SYNOPSIS
@@ -23,6 +23,7 @@ myrescue \- Harddisc Rescue
 .IR good-range ]
 .RB [ -F
 .IR failed-range ]
+.RB [ -T ]
 .RB [ -J
 .IR jump-after-blocks ]
 .I input-file
@@ -47,6 +48,12 @@ chances of rescuing the remaining undamaged data drop dramatically. So
 in skip mode, myrescue tries to get out of damaged areas quickly by
 exponentially increasing the stepsize. The skipped blocks are marked
 as unhandled in the block bitmap and can be retried later.
+.PP
+As another alternative, the program can jump around on the disc,
+trying random blocks to first get an overview of the damage. In case
+of regular defects (e.g. an entire failed head) this can be used to
+determine the physical disc structure and to avoid these regions in
+the first run.
 .PP
 Finally, the program has an option to multiply try to read a
 block before considering it damaged.
@@ -79,8 +86,9 @@ this is 4096, which happens to be the default.
 .TP
 .BI -B " bitmap-file"
 The file containing the status table of all blocks. Nice (or
-frightening...) to view with hexdump. 01 means OK; 00 means not yet
-done; negative values mean the number of failed read attempts. If not
+frightening...) to view with hexdump. 01 means OK; 02 means that the
+block was OK, but took a long time to read; 00 means not yet done;
+negative values mean the number of failed read attempts. If not
 given, defaults to
 .IB output-file .bitmap
 .TP
@@ -126,10 +134,16 @@ Extends -f to also skip any block within
 .I failed-range
 blocks of a block to be skipped as specified by -f.
 .TP
+.B -T
+Also avoid blocks, that were successfully read, but took an unusually
+long time to read. In case of growing defects, these blocks can
+mark the boundaries of defective regions. This options makes -A, -S
+and -F treat such blocks as defective.
+.TP
 .BI -J " jump-after-blocks"
 Randomly jump across the disc after reading
 .I jump-after-blocks
-blocks. This might be useful to scan discs with scattered defects.
+blocks in both directions. This might be useful to scan discs with scattered defects.
 In jump mode -S causes myrescue to jump to a new block upon the first 
 failed sector or upon hitting a sector to be skipped as specified by 
 -f, -G or -F.
@@ -183,6 +197,14 @@ ing beyond the end of file and then writing, the space in between is
 filled with zero-bytes.
 .PP
 The block bitmap overflows after 128 failed read attempts.
+.PP
+The random jump loop currently does not terminate. myrescue will
+continuously try blocks but find that they have already been read or
+have to be skipped, ending up at 100% CPU usage. The reason is, that
+it's hard to determine when to terminate without checking the entire
+block bitmap. A fix is in the making, replacing the (pseudo-)random
+jumping by a pseudorandom permutation, allowing a well-defined
+iteration to check each block exactly once.
 .SH AUTHORS
 Kristof Koehler <kristofk@users.sourceforge.net>,
 Peter Schlaile <schlaile@users.sourceforge.net>

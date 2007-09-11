@@ -1,5 +1,5 @@
-.\" $Header: /cvsroot/myrescue/doc/myrescue.de.1,v 1.4 2007/08/26 21:58:58 kristofk Exp $
-.TH MYRESCUE "8" "December 2004" "myrescue 0.9.2" "User Commands"
+.\" $Header: /cvsroot/myrescue/doc/myrescue.de.1,v 1.5 2007/09/11 00:31:22 kristofk Exp $
+.TH MYRESCUE "8" "September 2007" "myrescue 0.9.5" "User Commands"
 .SH NAME
 myrescue \- Festplattenrettungstool
 .SH SYNOPSIS
@@ -22,6 +22,7 @@ myrescue \- Festplattenrettungstool
 .RB [ -G
 .IR good-range ]
 .RB [ -F
+.RB [ -T ]
 .IR failed-range ]
 .RB [ -J
 .IR jump-after-blocks ]
@@ -47,11 +48,18 @@ Bloecke weiterhin zu lesen, so leidet die Plattenoberflaeche, die Lesekoepfe und
 Im Skip-Modus versucht MyRescue, so schnell wie moeglich aus dem defekten Bereich herauszukommen. Die uebersprungenen Bloecke werden in der Blockbitmap markiert. Hat man nun die noch
 lesbaren Daten gesichert, kann man dann weitere Leseversuche starten.
 .PP
+Weiterhin kann MyRescue zufaellig Bloecke ausprobieren. Damit erhaelt
+man einen ersten Ueberblick ueber Ausmass und Struktur der
+Schaeden. Bei regelmaessigen Schaeden (z.B. Ausfall eines ganzen
+Lesekopfs) kann man so die physikalische Struktur der Platte
+herausfinden und die beschaedigten Bereiche beim ersten Durchlauf
+umgehen.
+.PP
 Abschliessend besitzt das Programm eine Option, um mehrfache Leseversuche
 auf defekte Bloecke zu starten, bevor sie als Zerstoert eingetragen werden.
 .SH HINWEIS
 .B DIESES TOOL IST KEIN (!) ERSATZ FUER PROFESSIONELLE DATENRETTUNG DURCH 
-.B DARAUF SPEZIALISIERTE FIRMEN
+.B DARAUF SPEZIALISIERTE FIRMEN.
 .PP
 Haben Sie also die Moeglichkeit, eine solche Firma kostenguenstig 
 (da solche Dienstleistungen sehr kostspielig sind) zu engagieren, dann sollten 
@@ -74,9 +82,10 @@ Die Groesse der Sektoren (fuer die Fehlererkennung) der Festplatte. Meistens sin
 .BI -B " bitmap-file"
 Gibt den Namen der Bitmap-Datei an, die die Status aller Bloecke 
 beinhaltet. Wenn man die Datei mittels hexdump anschaut, 
-so steht der Wert 01 fuer korrekt gelesene Sektoren, 00 fuer noch nicht bearbeitete. Negative
-Werte geben die Anzahl fehlgeschlagener Leseversuche an. 
-Gibt man keine Dateinamen an, so wird der Name 
+so steht der Wert 01 fuer korrekt gelesene Sektoren, 02 fuer solche,
+die erst nach laengerer Zeit gelesen werden konnten und 00 fuer noch
+nicht bearbeitete. Negative Werte geben die Anzahl fehlgeschlagener
+Leseversuche an. Gibt man keine Dateinamen an, so wird der Name 
 .IB output-file .bitmap
 verwendet.
 .TP
@@ -125,10 +134,17 @@ die bis zu
 .I failed-range
 Bloecke von einem laut -f zu ueberspringenden Block entfernt liegen.
 .TP
+.B -T
+Vermeide Bloecke, die zwar erfolgreich gelesen werden konnten, bei
+denen dies aber ungewoehnlich lange gedauert hat. Diese Bloecke zeigen
+meist die Randbereiche von langsam sterbenden Plattenbereichen
+an. Diese Option sorgt dafuer, dass diese Bloecke fuer die Optionen
+bei -A, -S und -F wie defekte Bloecke behandelt werden.
+.TP
 .BI -J " jump-after-blocks"
 Jeweils nachdem
 .I jump-after-blocks
-Bloecke gelesen wurden, wird zufaellig zu einem anderen Block gesprungen. 
+Bloecke in beide Richtungen gelesen wurden, wird zufaellig zu einem anderen Block gesprungen. 
 Sinnvoll, um Platten mit verstreuten Defektbereichen zunaechst zu
 scannen. In diesem Modus bewirkt -S das Weiterspringen beim ersten
 Defekt oder beim Antreffen eines Blocks, der laut -f, -G or -F zu
@@ -189,6 +205,15 @@ verlaesst sich darauf, dass bei
 hinter das Dateiende der Bereich bis dahin mit Nullen aufgefuellt wird.
 .PP
 Die Blockbitmap laeuft nach 128 Lesefehlern ueber.
+.PP
+In der aktuellen Version terminiert das Programm im
+Zufaellig-Herumspringen-Modus nicht, sondern probiert immer weiter
+noch zu pruefende Bloecke durch. Am Ende wird myrescue 100% CPU-Zeit
+verschlingen. Um die Situation zu erkennen, dass keine weiteren
+Bloecke mehr zu behandeln sind, muesste die Block-Bitmap einmal
+komplett ueberprueft werden. Eine Korrektur ist in Arbeit, die das
+(pseudo-)zufaellige Springen durch eine pseudozufaellige Permutation
+ersetzt, die in einer Iteration jeden Block genau einmal prueft.
 .SH AUTOREN
 Kristof Koehler <kristofk@users.sourceforge.net>,
 Peter Schlaile <schlaile@users.sourceforge.net>
