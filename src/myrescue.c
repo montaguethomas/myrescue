@@ -34,6 +34,8 @@
 #include <getopt.h>
 #include <string.h>
 
+#include "permute.h"
+
 #define LONG_TIME 3
 
 long long filesize ( int fd )
@@ -159,12 +161,13 @@ int check_block ( int bitmap_fd, long block_num,
 }
 
 void print_status ( long block, long start_block, long end_block, 
-		    long ok_count, long bad_count )
+		    long ok_count, long bad_count, long done_count )
 {
 	fprintf ( stderr, 
-		  "\rblock %09ld (%09ld-%09ld)   "
+		  "\rblock %09ld (%09ld-%09ld, %.2f%%)   "
 		  "ok %09ld   bad %09ld   ",
 		  block, start_block, end_block,
+		  (100.0*done_count)/(end_block-start_block),
 		  ok_count, bad_count ) ;
 }
 
@@ -195,7 +198,8 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 				   skip_fail, long_as_bad,
 				   start_block, end_block ) ) {
 			print_status ( block, start_block, end_block, 
-				       ok_count, bad_count ) ;
+				       ok_count, bad_count, 
+				       forward ? block-start_block : end_block-1-block );
 			time(&before);
 			if ( try_block ( src_fd, dst_fd, 
 					 block, block_size, retry_count,
@@ -214,7 +218,9 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 				}
 			} else {
 				++bad_count;
-				poke_map(bitmap_fd, block, block_state-1);
+				if ( block_state > -127 )
+					block_state -= 1;
+				poke_map(bitmap_fd, block, block_state);
 				if (abort_error)
 					break;
 				if (skip)
@@ -223,14 +229,15 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 		} else {
 			if ( block % 1000 == 0 ) {
 				print_status ( block, start_block, end_block, 
-					       ok_count, bad_count ) ;
+					       ok_count, bad_count, 
+					       forward ? block-start_block : end_block-1-block );
 			}
 			block_step = 1 ;
 		}
 		
 	}
 	print_status ( forward ? end_block : start_block, start_block, end_block, 
-		       ok_count, bad_count ) ;
+		       ok_count, bad_count, end_block-start_block ) ;
 	fprintf ( stderr, "\n" ) ;
 }
 
@@ -239,7 +246,8 @@ int do_jump_run ( int src_fd, int dst_fd, int bitmap_fd,
 		  int retry_count, int abort_error, int skip, 
 		  int skip_fail, int jump,
 		  int good_range, int failed_range, int long_as_bad,
-		  long block, int jump_count, int jump_step,
+		  long block, long orig_block,
+		  int jump_count, int jump_step,
 		  long *ok_count, long *bad_count,
 		  unsigned char * buffer ) 
 {
@@ -269,7 +277,7 @@ int do_jump_run ( int src_fd, int dst_fd, int bitmap_fd,
 		}
 
 		print_status ( block, start_block, end_block, 
-			       *ok_count, *bad_count ) ;
+			       *ok_count, *bad_count, orig_block-start_block ) ;
 		
 		time(&before);
 		if ( try_block ( src_fd, dst_fd, 
@@ -285,7 +293,9 @@ int do_jump_run ( int src_fd, int dst_fd, int bitmap_fd,
 			}
 		} else {
 			++(*bad_count);
-			poke_map(bitmap_fd, block, block_state-1);
+			if ( block_state > -127 )
+				block_state -= 1;
+			poke_map(bitmap_fd, block, block_state);
 			if (skip || abort_error)
 				return 0;
 		}
@@ -300,30 +310,33 @@ void do_jump ( int src_fd, int dst_fd, int bitmap_fd,
 	       int good_range, int failed_range, int long_as_bad,
 	       unsigned char * buffer )
 {
-	long block ;
+	long orig_block, block ;
 	long ok_count = 0 ;
 	long bad_count = 0 ;
+	permute_info *pi;
 
 	srandom(getpid() ^ time(NULL));
 
-	// FIXME: figure out how to decide when to quit
-	for(;;) {
+	pi = permute_init(997,16);
+	
+	for ( orig_block = start_block; orig_block < end_block; orig_block++ ) {
 
-		block = (long long)random() 
-			^ ((long long)random() << 16)
-			^ ((long long)random() << 32)
-			^ ((long long)random() << 48);
-		block %= end_block - start_block;
-		if ( block < 0 )
-			block += end_block - start_block;
-		block += start_block;
+		block = permute ( orig_block-start_block,
+				  end_block-start_block,
+				  pi ) + start_block;
+
+		if ( orig_block % 1000 == 0 )
+			print_status ( block, start_block, end_block, 
+				       ok_count, bad_count, 
+				       orig_block-start_block );
 		
 		if ( ! do_jump_run(src_fd, dst_fd, bitmap_fd,
 				   block_size, start_block, end_block,
 				   retry_count, abort_error, skip, 
 				   skip_fail, jump,
 				   good_range, failed_range, long_as_bad,
-				   block, jump, +1,
+				   block, orig_block,
+				   jump, +1,
 				   &ok_count, &bad_count,
 				   buffer) )
 			if ( abort_error )
@@ -334,13 +347,17 @@ void do_jump ( int src_fd, int dst_fd, int bitmap_fd,
 				   retry_count, abort_error, skip, 
 				   skip_fail, jump,
 				   good_range, failed_range, long_as_bad,
-				   block-1, jump-1, -1,
+				   block-1, orig_block,
+				   jump-1, -1,
 				   &ok_count, &bad_count,
 				   buffer) )
 			if ( abort_error )
 				break;
-
 	}
+	permute_free(pi);
+
+	print_status ( end_block, start_block, end_block, 
+		       ok_count, bad_count, end_block-start_block ) ;
 	fprintf(stderr,"\n");
 }
 
