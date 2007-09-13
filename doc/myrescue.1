@@ -1,4 +1,4 @@
-.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.10 2007/09/11 00:31:22 kristofk Exp $
+.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.11 2007/09/13 09:55:23 kristofk Exp $
 .TH MYRESCUE "8" "September 2007" "myrescue 0.9.5" "User Commands"
 .SH NAME
 myrescue \- Harddisc Rescue
@@ -196,15 +196,7 @@ currently relies on the filesystem semantics, that when
 ing beyond the end of file and then writing, the space in between is
 filled with zero-bytes.
 .PP
-The block bitmap overflows after 128 failed read attempts.
-.PP
-The random jump loop currently does not terminate. myrescue will
-continuously try blocks but find that they have already been read or
-have to be skipped, ending up at 100% CPU usage. The reason is, that
-it's hard to determine when to terminate without checking the entire
-block bitmap. A fix is in the making, replacing the (pseudo-)random
-jumping by a pseudorandom permutation, allowing a well-defined
-iteration to check each block exactly once.
+The block bitmap maxes out after 127 failed read attempts.
 .SH AUTHORS
 Kristof Koehler <kristofk@users.sourceforge.net>,
 Peter Schlaile <schlaile@users.sourceforge.net>

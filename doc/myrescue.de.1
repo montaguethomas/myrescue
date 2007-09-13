@@ -1,4 +1,4 @@
-.\" $Header: /cvsroot/myrescue/doc/myrescue.de.1,v 1.5 2007/09/11 00:31:22 kristofk Exp $
+.\" $Header: /cvsroot/myrescue/doc/myrescue.de.1,v 1.6 2007/09/13 09:55:23 kristofk Exp $
 .TH MYRESCUE "8" "September 2007" "myrescue 0.9.5" "User Commands"
 .SH NAME
 myrescue \- Festplattenrettungstool
@@ -204,16 +204,7 @@ verlaesst sich darauf, dass bei
 .BR lseek (2)
 hinter das Dateiende der Bereich bis dahin mit Nullen aufgefuellt wird.
 .PP
-Die Blockbitmap laeuft nach 128 Lesefehlern ueber.
-.PP
-In der aktuellen Version terminiert das Programm im
-Zufaellig-Herumspringen-Modus nicht, sondern probiert immer weiter
-noch zu pruefende Bloecke durch. Am Ende wird myrescue 100% CPU-Zeit
-verschlingen. Um die Situation zu erkennen, dass keine weiteren
-Bloecke mehr zu behandeln sind, muesste die Block-Bitmap einmal
-komplett ueberprueft werden. Eine Korrektur ist in Arbeit, die das
-(pseudo-)zufaellige Springen durch eine pseudozufaellige Permutation
-ersetzt, die in einer Iteration jeden Block genau einmal prueft.
+Die Blockbitmap zaehlt hoechstens 127 Lesefehlern.
 .SH AUTOREN
 Kristof Koehler <kristofk@users.sourceforge.net>,
 Peter Schlaile <schlaile@users.sourceforge.net>
