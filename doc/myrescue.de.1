@@ -1,5 +1,5 @@
-.\" $Header: /cvsroot/myrescue/doc/myrescue.de.1,v 1.6 2007/09/13 09:55:23 kristofk Exp $
-.TH MYRESCUE "8" "September 2007" "myrescue 0.9.5" "User Commands"
+.\" $Header: /cvsroot/myrescue/doc/myrescue.de.1,v 1.7 2008/06/01 23:42:56 kristofk Exp $
+.TH MYRESCUE "8" "Juni 2008" "myrescue 0.9.6" "User Commands"
 .SH NAME
 myrescue \- Festplattenrettungstool
 .SH SYNOPSIS
@@ -31,15 +31,17 @@ myrescue \- Festplattenrettungstool
 .SH BESCHREIBUNG
 myrescue ist kleines Tool, um von beschaedigten Festplatten
 die noch lesbaren Daten zu sichern. Es hat eine aehnliche Funktion wie
-dd_rescue, jedoch versucht MyRescue zuerst, die unversehrten
-Daten zu retten, um dann erst die zerstoerten Bereiche zu bearbeiten. 
+dd_rescue, jedoch kann es in mehreren Durchlaeufen aufgerufen werden
+und versucht zuerst, die unversehrten Daten zu retten.
 .PP
 Das Programm versucht, das Medium Block fuer Block in eine 
 Datei auf einer 
 .IB anderen (!) 
-Festplatte zu kopieren, wobei eine Tabelle ("Blockbitmap")
-erstellt wird, in der die erfolgreich gelesenen bzw. fehlerhaften Bloecke festgehalten
-werden. Diese Blockbitmap kann dann fuer weitere Leseversuche wiederverwendet werden.
+Festplatte zu kopieren, wobei eine Tabelle erstellt ("Blockbitmap")
+wird, in der die erfolgreich gelesenen bzw. fehlerhaften Bloecke
+festgehalten werden. Diese Blockbitmap kann dann fuer weitere Aufrufe
+wiederverwendet werden, so dass nur die bisher nicht kopierten Bloecke
+gelesen werden.
 .PP
 Zudem besitzt MyRescue einen speziellen Modus, um Lesefehler zu behandeln:
 Normalerweise sind bei einem Festplattenschaden viele Bloecke betroffen und damit defekt bzw. zerstoert. Versuchte man nun, diese
@@ -55,8 +57,12 @@ Lesekopfs) kann man so die physikalische Struktur der Platte
 herausfinden und die beschaedigten Bereiche beim ersten Durchlauf
 umgehen.
 .PP
+Um die Festplatte weiter zu schonen, kann das Programm aufgefordert
+werden, die Umgebung bereits bekannter Defekte zu meiden oder
+zunaechst nur in der Naehe intakter Bereiche zu arbeiten.
+.PP
 Abschliessend besitzt das Programm eine Option, um mehrfache Leseversuche
-auf defekte Bloecke zu starten, bevor sie als Zerstoert eingetragen werden.
+auf defekte Bloecke zu starten, bevor sie als zerstoert eingetragen werden.
 .SH HINWEIS
 .B DIESES TOOL IST KEIN (!) ERSATZ FUER PROFESSIONELLE DATENRETTUNG DURCH 
 .B DARAUF SPEZIALISIERTE FIRMEN.
@@ -64,16 +70,30 @@ auf defekte Bloecke zu starten, bevor sie als Zerstoert eingetragen werden.
 Haben Sie also die Moeglichkeit, eine solche Firma kostenguenstig 
 (da solche Dienstleistungen sehr kostspielig sind) zu engagieren, dann sollten 
 sie nicht einmal daran denken, MyRescue einzusetzen, da es zur weiteren Beschaedigung der Festplatte fuehren kann.
-MyRescue ist nur fuer ganz Verzweifelte, die sich eine professionelle Datenrettung auf keinen Fall leisten koennen und fuer diejenigen, die ganz genau wissen, was sie tun
-(z.B. bei Alterung der Magnetbeschichtung usw.)
+MyRescue ist nur fuer ganz Verzweifelte, die sich eine professionelle Datenrettung auf keinen Fall leisten koennen und fuer diejenigen, die ganz genau wissen, was sie tun.
 .PP
-Man sollte nicht zuviel erwarten. Den Autoren sind zwar schon komplette Restaurierungen gelungen, aber davon sollte man nicht ausgehen. Sehen  Sie die Daten und Festplatte vorerst als zerstoert an. (Und freuen sich ueber alle Ueberlebenden, die doch noch auftauchen.)
+Datenrettung - egal ob professionell oder in Heimarbeit - ist
+sorgfaeltige Detektivarbeit. Der Zustand von beschaedigten Platten
+kann sich schnell verschlechtern und sie reagieren nicht mehr
+deterministisch. Hat man erst einmal einen Fehler gemacht, bekommt man
+meistens keine zweite Chance. Deswegen muss man sich genau bewusst
+sein, was man tut und genau verstehen, was gerade mit der Platte
+passiert. Wenn Sie sich unsicher fuehlen, sollten Sie jetzt aufhoeren
+und einen Linux-Experten um Unterstuetzung bitten.
+.PP
+Man sollte nicht zuviel erwarten. Den Autoren sind zwar schon
+komplette Restaurierungen gelungen, aber davon sollte man nicht
+ausgehen. Sehen  Sie die Daten und Festplatte vorerst als zerstoert
+an. (Und freuen sich ueber alle ueberlebenden Dateien, die doch noch
+auftauchen.)
 .PP
 Es gilt der uebliche GPL-Haftungsausschluss.
 .B INSBESONDERE SEI DARAUF HINGEWIESEN, DAS DER AUTOR KEINERLEI HAFTUNG
 .B FUER MISLUNGENE RETTUNGSVERSUCHE ODER ZERSTOERTE FESTPLATTEN UEBERNIMMT!  
 .PP
-Auch wenn Sie das jetzt vermutlich am wenigsten hoeren wollen: Machen Sie in Zukunft regelmaessige Datensicherungen, um ein "naechstes Mal" in Sachen Datenrettung zu vermeiden.
+Und abschliessend, auch wenn Sie das jetzt vermutlich am wenigsten
+hoeren wollen: Machen Sie in Zukunft regelmaessige Datensicherungen,
+um ein "naechstes Mal" in Sachen Datenrettung zu vermeiden.
 .SH OPTIONS
 .TP
 .BI -b " block-size"
@@ -154,17 +174,25 @@ ueberspringen ist.
 Zeigt die Online-Hilfe an.
 .SH EMPFOHLENE VORGEHENSWEISE
 .PP
-Bevor man sich die Prozedur der Datenrettung antuen moechte ;-), sollte man 
-folgendes ueberdenken:
+Bevor man sich die Prozedur der Datenrettung antuen moechte ;-),
+sollte man folgendes ueberdenken:
 .IP \(bu
-Der ganze Vorgang ist sehr langwierig (u. Umstaenden mehrere Stunden oder gar Tage!)
-und aeusserst nervenaufreibend...
+Bei der Datenrettung ist jeder Fall einzigartig und benoetigt eine
+spezifische Herangehensweise. Das sture Befolgen von Vorgehensweisen
+ist ein dumme Idee. Betrachten Sie das folgende nur als Beispiel,
+beobachten Sie den Vorgang genau und schreiten sie ein, wenn etwas
+ungewoehnliches passiert. Und noch einmal: Wenn Sie sich unsicher
+sind, hoeren Sie sofort auf und ziehen einen Experten zu Rate.
 .IP \(bu
-Man braucht MINDESTENS eine zusaetzliche Festplatte oder ein genuegend
-grosses Medium (z.B. Streamer, ZIP-Laufwerk oder aehnliches). D.h.
-komplette Mediengroesse (z.B. bei einer 4 GB Partition eine ebenso grosser 
-freier Speicher auf der Sicherungsfestplatte) plus der Blockbitmap mit je 1 Byte
-pro Block. 
+Der ganze Vorgang ist sehr langwierig (u. Umstaenden mehrere Stunden
+oder gar Tage!) und aeusserst nervenaufreibend...
+.IP \(bu
+Man braucht genuegend freien Speicherplatz, und zwar mindestens die
+doppelte Mediengroesse (nicht nur der belegte Platz!) plus eine
+Blockbitmap mit je einem Byte pro Block. (Z.B. bei einer 4 GB
+Partition mehr als8 GB freien Speicher). Es sollte offensichtlich
+sein, dass die Daten NICHT auf der beschaedigten Platte gesichert
+werden.
 .IP
 .PP
 Nun gut, hat man sich dazu entschieden, so geht man wie folgt vor:  
@@ -185,16 +213,22 @@ zwischen den Durchlaeufen immer ein bis zwei Stunden warten.
 .IP \(bu
 Wiederholen Sie das ganze mit einer hoeheren Zahl an Leseversuchen.
 .IP \(bu
-Erstellen Sie schliesslich eine Kopie der geretteten Daten und fuehren Sie ggfs.
-den Befehl fsck darauf aus.
+.B Erstellen Sie eine Kopie der geretteten Daten 
+und fuehren Sie ggfs. den Befehl fsck darauf aus. Die Kopie ist
+wichtig! Wenn Dateisystemstrukturen beschaedigt wurden, koennen die
+Reparaturversuche von fsck die gerade geretteten Daten
+zerstoeren. Arbeiten Sie also ab jetzt immer mit einer Kopie der
+Image-Datei.
 .IP \(bu
-Mounten Sie das Dateisystem (falls in eine Datei kopiert: mittels loopback). Falls die Verzeichnisstrukturen zerstoert wurden, finden sich die noch zuzuordnenden Dateifragmente im Verzeichnis lost+found
+Mounten Sie das Dateisystem (falls in eine Datei kopiert: mittels
+loopback). Falls die Verzeichnisstrukturen zerstoert wurden, finden
+sich die noch zuzuordnenden Dateifragmente im Verzeichnis lost+found 
 .PP
 Es hilft vielleicht, wenn man waehrend des Lesens von defekten Bloecken der
 Festplatte Zeit gibt, sich zu rekalibrieren.
 .PP
-Die Programmierer freuen sich (vor allem wenn alles glatt geht) von Ihnen und Ihren
-Erfahrungen hoeren, insbesondere im  
+Die Programmierer freuen sich (vor allem wenn alles glatt geht) von
+Ihnen und Ihren Erfahrungen hoeren, insbesondere im  
 .B Experiences
 -Forum auf der Sourceforge Project Seite. Vielen Dank!
 .SH BEKANNTE FEHLER
@@ -204,7 +238,7 @@ verlaesst sich darauf, dass bei
 .BR lseek (2)
 hinter das Dateiende der Bereich bis dahin mit Nullen aufgefuellt wird.
 .PP
-Die Blockbitmap zaehlt hoechstens 127 Lesefehlern.
+Die Blockbitmap zaehlt hoechstens 127 Lesefehler.
 .SH AUTOREN
 Kristof Koehler <kristofk@users.sourceforge.net>,
 Peter Schlaile <schlaile@users.sourceforge.net>

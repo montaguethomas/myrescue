@@ -1,5 +1,5 @@
-.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.11 2007/09/13 09:55:23 kristofk Exp $
-.TH MYRESCUE "8" "September 2007" "myrescue 0.9.5" "User Commands"
+.\" $Header: /cvsroot/myrescue/doc/myrescue.1,v 1.12 2008/06/01 23:42:55 kristofk Exp $
+.TH MYRESCUE "8" "June 2008" "myrescue 0.9.6" "User Commands"
 .SH NAME
 myrescue \- Harddisc Rescue
 .SH SYNOPSIS
@@ -31,13 +31,13 @@ myrescue \- Harddisc Rescue
 .SH DESCRIPTION
 myrescue is a program to rescue the still-readable data from a
 damaged harddisk. It is similiar in purpose to dd_rescue, but it
-tries to quickly get out of damaged areas to first handle the not
-yet damaged part of the disk and return later.
+can be run in multiple passes and has options to avoid damaged areas
+to first handle the not yet damaged part of the disk.
 .PP
 The program tries to copy the device blockwise to a file and
 keeps a table ("block bitmap") noting whether a block has been
 successfully copied, not yet handled or has had errors. This block
-bitmap can be used in successive runs to concentrate on the not yet
+bitmap is used in successive passes to only read the not yet
 rescued blocks.
 .PP
 The program has a special skip mode to handle read errors. Usually
@@ -55,6 +55,9 @@ of regular defects (e.g. an entire failed head) this can be used to
 determine the physical disc structure and to avoid these regions in
 the first run.
 .PP
+Also there are options to avoid getting close to already recognized
+defects or stay in the proximity of good regions.
+.PP
 Finally, the program has an option to multiply try to read a
 block before considering it damaged.
 .SH NOTE
@@ -63,9 +66,15 @@ If you do have the latter option, don't even think of using
 .BR myrescue ,
 as it may further damage your disk. This tool is
 provided only for the case that you are absolutely desperate and
-definitely cannot afford a professional data recovery. Or in case
-you know what you are doing, e.g. if you know that it is the aging
-of the magnetisation layer that is causing your problem.
+definitely cannot afford a professional data recovery and know what
+you are doing. 
+.PP
+Data recovery - whether professional or DIY - is always careful
+detective work. Damaged drives deteriorate rapidly and behave
+nondeterministically, you may not get a second chance once you made a
+mistake. So you have to be fully aware of what you're doing and
+understand precisely what's happening. If you are unsure it's probably
+best to stop right now and ask a linux guru for assistance.
 .PP
 In any case do not expect too much. While complete restores have been
 witnessed, you should not take them for granted. A better attitude is
@@ -151,10 +160,17 @@ failed sector or upon hitting a sector to be skipped as specified by
 .BR -h ", " -?
 Display usage information.
 .SH RECOMMENDED PROCEDURE
+NOTE: In data recovery every case needs special consideration and a
+specific approach - mindlessly running procedures is a bad idea. So
+consider the following an example, keep a close eye on the process and
+be prepared to stop and reconsider if anything unusual happens. And
+once again: If you are feeling unsure, stop and ask someone
+experienced for assistance.
 .IP \(bu
-Make sure you have sufficient disk space to copy the whole
-partition (not just the used ammount of data) to plus some
-space for the block bitmap (1 byte per block).
+Make sure you have sufficient disk space for twice the whole
+partition (complete partition size, not just the used amount of data)
+plus some space for the block bitmap (1 byte per block). Of course
+this should NOT be on the damaged disc.
 .IP \(bu
 Determine the hardware block size (CRC/ECC unit) of your
 harddisk. This may be found out from hdparm, some entries in
@@ -174,7 +190,12 @@ Try waiting a couple of hours between the retries.
 .IP \(bu
 Repeat this with higher retry counts and wait for convergence.
 .IP \(bu
-Make a copy of the rescued data and run fsck on it.
+.B Make a copy of the rescued data
+and run fsck on it. The copy is important! Running fsck is risky if
+blocks containing filesystem structures (superblocks, directories,
+inodes, journal, ...) are missing. Sometimes the well-meant attempt to
+correct the filesystem can damage the image file, so always work on a
+copy.
 .IP \(bu
 Mount the filesystem (if copied to a file: via loopback) and check
 your data. If directory information has been destroyed, fsck moves
