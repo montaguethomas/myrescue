@@ -33,10 +33,18 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <string.h>
+#include <signal.h>
 
 #include "permute.h"
 
 #define LONG_TIME 3
+
+int sig_abort = 0;
+
+void handle_sig ( int dummy )
+{
+	sig_abort = 1;
+}
 
 long long filesize ( int fd )
 {
@@ -126,7 +134,7 @@ int try_block ( int src_fd, int dst_fd,
 		unsigned char * buffer )
 {
 	int r ;
-	for ( r = 0 ; r < retry_count ; r++ ) {
+	for ( r = 0 ; r < retry_count && ! sig_abort ; r++ ) {
 		if ( copy_block ( src_fd, dst_fd, 
 				  block_num, block_size,
 				  buffer ) == 0 )
@@ -188,7 +196,7 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 	int long_time;
 
 	for ( block = forward ? start_block : (end_block-1) ; 
-	      forward ? (block < end_block) : (block >= start_block) ; 
+	      (forward ? (block < end_block) : (block >= start_block)) && ! sig_abort ; 
 	      block += forward ? block_step : -block_step ) {
 		block_state = peek_map ( bitmap_fd, block ) ;
 		if ( (block_state <= 0) &&
@@ -236,7 +244,10 @@ void do_copy ( int src_fd, int dst_fd, int bitmap_fd,
 		}
 		
 	}
-	print_status ( forward ? end_block : start_block, start_block, end_block, 
+	if ( sig_abort )
+		fprintf ( stderr, "\nABORTED    " );
+	else
+		print_status ( forward ? end_block : start_block, start_block, end_block, 
 		       ok_count, bad_count, end_block-start_block ) ;
 	fprintf ( stderr, "\n" ) ;
 }
@@ -255,7 +266,7 @@ int do_jump_run ( int src_fd, int dst_fd, int bitmap_fd,
 	time_t before, after;
 	int long_time;
 
-	for ( ; jump_count-- > 0 ; block += jump_step ) {
+	for ( ; jump_count-- > 0 && !sig_abort ; block += jump_step ) {
 		if ( block >= end_block )
 			break;
 		if ( block < start_block )
@@ -319,7 +330,7 @@ void do_jump ( int src_fd, int dst_fd, int bitmap_fd,
 
 	pi = permute_init(997,16);
 	
-	for ( orig_block = start_block; orig_block < end_block; orig_block++ ) {
+	for ( orig_block = start_block; orig_block < end_block && !sig_abort; orig_block++ ) {
 
 		block = permute ( orig_block-start_block,
 				  end_block-start_block,
@@ -356,8 +367,11 @@ void do_jump ( int src_fd, int dst_fd, int bitmap_fd,
 	}
 	permute_free(pi);
 
-	print_status ( end_block, start_block, end_block, 
-		       ok_count, bad_count, end_block-start_block ) ;
+	if ( sig_abort )
+		fprintf ( stderr, "\nABORTED    " );
+	else
+		print_status ( end_block, start_block, end_block, 
+			       ok_count, bad_count, end_block-start_block ) ;
 	fprintf(stderr,"\n");
 }
 
@@ -569,6 +583,7 @@ int main(int argc, char** argv)
 	}
 
 	/* start the real job */
+	signal(SIGINT, handle_sig);
 	if ( jump == 0 )
 		do_copy ( src_fd, dst_fd, bitmap_fd,
 			  block_size, start_block, end_block,
