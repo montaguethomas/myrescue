@@ -119,16 +119,24 @@ int main(int argc, char** argv)
 					buf_rgb[3*x+0] = 0;
 					buf_rgb[3*x+1] = 0;
 					buf_rgb[3*x+2] = 128;
-				} else if ( buf_bit[x] > 0 ) {
+				} else if ( buf_bit[x] == 1 ) {
 					buf_rgb[3*x+0] = 0;
 					buf_rgb[3*x+1] = 128;
 					buf_rgb[3*x+2] = 0;
-				} else if ( buf_bit[x] < 0 ) {
+				} else if ( buf_bit[x] == 2 ) {
+					buf_rgb[3*x+0] = 128;
+					buf_rgb[3*x+1] = 255;
+					buf_rgb[3*x+2] = 0;
+				} else if ( buf_bit[x] == 0 ) {
+					buf_rgb[3*x+0] = 0;
+					buf_rgb[3*x+1] = 0;
+					buf_rgb[3*x+2] = 0;
+				} else if ( buf_bit[x] == -1 ) {
 					buf_rgb[3*x+0] = 255;
-					buf_rgb[3*x+1] = 128;
+					buf_rgb[3*x+1] = 255;
 					buf_rgb[3*x+2] = 0;
 				} else {
-					buf_rgb[3*x+0] = 0;
+					buf_rgb[3*x+0] = 255;
 					buf_rgb[3*x+1] = 0;
 					buf_rgb[3*x+2] = 0;
 				}
